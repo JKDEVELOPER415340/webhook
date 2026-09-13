@@ -8,7 +8,7 @@ const json = (body, statusCode = 200) => new Response(JSON.stringify(body), {
 });
 
 export async function handler(event) {
-  const path = (event.path || '').replace(/^\/api\/?/, '');
+  const path = (event.path || '').replace(/^\/\.netlify\/functions\/api\/?/, '').replace(/^\/api\/?/, '');
   const method = event.httpMethod;
 
   try {
