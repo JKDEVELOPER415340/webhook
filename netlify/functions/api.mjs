@@ -35,7 +35,7 @@ export default async function handler(req) {
         autoStart: typeof patch.autoStart === 'boolean' ? patch.autoStart : undefined
       });
       await addLog('info', 'Configuration updated');
-      return json(safeConfig(cfg));
+      return json({ config: safeConfig(cfg) });
     }
 
     if (path === 'health' && method === 'GET') {
