@@ -12,11 +12,18 @@ app.use(helmet());
 app.use(cors());
 app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf; } }));
 
-const CONFIG_FILE = path.join(__dirname, 'config.json');
+const CONFIG_FILE = process.env.CONFIG_FILE || path.join(__dirname, 'config.json');
+
+const ENV_DEFAULTS = {
+  verifyToken: process.env.VERIFY_TOKEN || '',
+  appSecret: process.env.APP_SECRET || '',
+  destinationUrl: process.env.DESTINATION_URL || '',
+  autoStart: process.env.AUTO_START === 'true'
+};
 
 function loadConfig() {
-  try { return { ...state.config, ...JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')) }; }
-  catch (e) { return state.config; }
+  try { return { ...ENV_DEFAULTS, ...JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')) }; }
+  catch (e) { return { ...ENV_DEFAULTS }; }
 }
 
 function saveConfig() {
@@ -25,12 +32,7 @@ function saveConfig() {
 }
 
 const state = {
-  config: {
-    verifyToken: '',
-    appSecret: '',
-    destinationUrl: '',
-    autoStart: false
-  },
+  config: { ...ENV_DEFAULTS },
   logs: [],
   forwarding: false,
   startedAt: null

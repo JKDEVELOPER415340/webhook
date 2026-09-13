@@ -1,0 +1,10 @@
+node_modules
+client/node_modules
+client/dist
+client/build-number.json
+.git
+.netlify
+*.log
+.env
+server/config.json
+docker-compose.yml

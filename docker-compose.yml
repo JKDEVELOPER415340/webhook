@@ -1,0 +1,20 @@
+services:
+  relay:
+    build: .
+    image: meta-webhook-relay:latest
+    container_name: meta-webhook-relay
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: "3000"
+      VERIFY_TOKEN: ""
+      APP_SECRET: ""
+      DESTINATION_URL: ""
+      AUTO_START: "false"
+      CONFIG_FILE: /app/data/config.json
+    volumes:
+      - relay-config:/app/data
+
+volumes:
+  relay-config:
