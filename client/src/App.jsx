@@ -245,7 +245,8 @@ function App() {
       </section>
 
       <footer>
-        Webhook endpoint: <code>/webhook</code> · Verification: <code>hub.mode</code>, <code>hub.verify_token</code>, <code>hub.challenge</code>
+        Webhook endpoint: <code>/webhook</code> · Verification: <code>hub.mode</code>, <code>hub.verify_token</code>, <code>hub.challenge</code><br />
+        Build: <span id="build-time">{__BUILD_TIME__}</span>
       </footer>
     </div>
   );
