@@ -7,8 +7,20 @@ const json = (body, statusCode = 200) => new Response(JSON.stringify(body), {
   headers: { 'content-type': 'application/json' }
 });
 
+function route(event) {
+  let raw = event.path || event.rawPath || '';
+  if (event.rawUrl) {
+    try { raw = new URL(event.rawUrl).pathname; } catch (e) {}
+  }
+  return raw
+    .replace(/^\/\.netlify\/functions\/api\/?/, '/')
+    .replace(/^\/api\/?/, '/')
+    .replace(/^\/+/, '')
+    .split('/')[0] || '';
+}
+
 export async function handler(event) {
-  const path = (event.path || '').replace(/^\/\.netlify\/functions\/api\/?/, '').replace(/^\/api\/?/, '');
+  const path = route(event);
   const method = event.httpMethod;
 
   try {
@@ -87,7 +99,7 @@ export async function handler(event) {
       }
     }
 
-    return json({ error: 'Not found' }, 404);
+    return json({ error: 'Not found', path: event.path || null, rawUrl: event.rawUrl || null }, 404);
   } catch (e) {
     return json({ error: e.message }, 500);
   }
