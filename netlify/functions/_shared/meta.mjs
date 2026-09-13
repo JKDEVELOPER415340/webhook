@@ -13,10 +13,11 @@ export function verifySignature(rawBody, signatureHeader, appSecret) {
   }
 }
 
-export function validChallenge(query, verifyToken) {
-  return query['hub.mode'] === 'subscribe' &&
-    query['hub.verify_token'] === verifyToken &&
-    typeof query['hub.challenge'] === 'string' && query['hub.challenge'].length > 0;
+export function validChallenge(searchParams, verifyToken) {
+  const mode = searchParams.get('hub.mode');
+  const token = searchParams.get('hub.verify_token');
+  const challenge = searchParams.get('hub.challenge');
+  return mode === 'subscribe' && token === verifyToken && typeof challenge === 'string' && challenge.length > 0;
 }
 
 export const WHATSAPP_TEST_PAYLOAD = {

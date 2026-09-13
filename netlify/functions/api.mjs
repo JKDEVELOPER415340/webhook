@@ -7,30 +7,27 @@ const json = (body, statusCode = 200) => new Response(JSON.stringify(body), {
   headers: { 'content-type': 'application/json' }
 });
 
-function route(event) {
-  let raw = event.path || event.rawPath || '';
-  if (event.rawUrl) {
-    try { raw = new URL(event.rawUrl).pathname; } catch (e) {}
-  }
-  return raw
+function route(url) {
+  return url.pathname
     .replace(/^\/\.netlify\/functions\/api\/?/, '/')
     .replace(/^\/api\/?/, '/')
     .replace(/^\/+/, '')
     .split('/')[0] || '';
 }
 
-export async function handler(event) {
-  const path = route(event);
-  const method = event.httpMethod;
+export default async function handler(req) {
+  const url = new URL(req.url);
+  const path = route(url);
+  const method = req.method;
 
   try {
     if (path === 'config' && method === 'GET') {
-      const cfg = await getConfig();
-      return json(safeConfig(cfg));
+      return json(safeConfig(await getConfig()));
     }
 
     if (path === 'config' && method === 'POST') {
-      const patch = event.body ? JSON.parse(event.body) : {};
+      let patch = {};
+      try { patch = await req.json(); } catch (e) {}
       const cfg = await saveConfig({
         verifyToken: typeof patch.verifyToken === 'string' ? patch.verifyToken : undefined,
         appSecret: typeof patch.appSecret === 'string' ? patch.appSecret : undefined,
@@ -42,8 +39,7 @@ export async function handler(event) {
     }
 
     if (path === 'health' && method === 'GET') {
-      const cfg = await getConfig();
-      return json({ ok: true, forwarding: isEnabled(cfg) });
+      return json({ ok: true, forwarding: isEnabled(await getConfig()) });
     }
 
     if (path === 'start' && method === 'POST') {
@@ -73,7 +69,8 @@ export async function handler(event) {
     }
 
     if (path === 'test' && method === 'POST') {
-      const custom = event.body ? JSON.parse(event.body) : null;
+      let custom = {};
+      try { custom = await req.json(); } catch (e) {}
       const payload = custom && Object.keys(custom).length ? custom : WHATSAPP_TEST_PAYLOAD;
       await addLog('received', 'Received test payload', payload);
 
@@ -99,10 +96,8 @@ export async function handler(event) {
       }
     }
 
-    return json({ error: 'Not found', path: event.path || null, rawUrl: event.rawUrl || null }, 404);
+    return json({ error: 'Not found' }, 404);
   } catch (e) {
     return json({ error: e.message }, 500);
   }
 }
-
-export default handler;

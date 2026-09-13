@@ -2,15 +2,19 @@ import { verifySignature, validChallenge } from './_shared/meta.mjs';
 import { getConfig, addLog, isEnabled } from './_shared/store.mjs';
 import axios from 'axios';
 
-export default async function handler(event) {
-  const cfg = await getConfig();
-  const authHeader = (key) => event.headers[key] || event.headers[key.toLowerCase()] || '';
+const json = (body, statusCode = 200) => new Response(JSON.stringify(body), {
+  status: statusCode,
+  headers: { 'content-type': 'application/json' }
+});
 
-  if (event.httpMethod === 'GET') {
-    const qs = event.queryStringParameters || {};
-    if (validChallenge(qs, cfg.verifyToken)) {
+export default async function handler(req) {
+  const url = new URL(req.url);
+  const cfg = await getConfig();
+
+  if (req.method === 'GET') {
+    if (validChallenge(url.searchParams, cfg.verifyToken)) {
       await addLog('success', 'Webhook verified by Meta');
-      return new Response(qs['hub.challenge'], {
+      return new Response(url.searchParams.get('hub.challenge'), {
         status: 200,
         headers: { 'content-type': 'text/plain' }
       });
@@ -19,29 +23,24 @@ export default async function handler(event) {
     return new Response('Verification failed', { status: 403 });
   }
 
-  if (event.httpMethod === 'POST') {
-    const sig = authHeader('x-hub-signature-256');
-    const valid = verifySignature(event.body, sig, cfg.appSecret);
+  if (req.method === 'POST') {
+    const sig = req.headers.get('x-hub-signature-256') || '';
+    const rawBody = await req.text();
+    const valid = verifySignature(rawBody, sig, cfg.appSecret);
     if (!valid) {
       await addLog('error', 'Rejected webhook: invalid X-Hub-Signature-256');
-      return new Response(JSON.stringify({ error: 'Invalid signature' }), {
-        status: 401,
-        headers: { 'content-type': 'application/json' }
-      });
+      return json({ error: 'Invalid signature' }, 401);
     }
 
     let payload;
-    try { payload = JSON.parse(event.body); } catch (e) { payload = event.body; }
-    await addLog('received', `Webhook POST received from ${authHeader('user-agent') || 'unknown'}`, payload);
+    try { payload = JSON.parse(rawBody); } catch (e) { payload = rawBody; }
+    await addLog('received', `Webhook POST received from ${req.headers.get('user-agent') || 'unknown'}`, payload);
 
     const dest = cfg.destinationUrl;
     const fwd = isEnabled(cfg);
     if (!dest || !fwd) {
       await addLog('warn', 'Forwarding skipped: ' + (!dest ? 'no destination URL' : 'forwarding is stopped'));
-      return new Response(JSON.stringify({ received: true, forwarded: false, reason: fwd ? 'no-destination' : 'not-running' }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' }
-      });
+      return json({ received: true, forwarded: false, reason: fwd ? 'no-destination' : 'not-running' });
     }
 
     await addLog('forwarding', `Forwarding to ${dest}`);
@@ -51,21 +50,13 @@ export default async function handler(event) {
         headers: { 'content-type': 'application/json', 'x-relay-source': 'meta-webhook-relay' }
       });
       await addLog('success', `Forwarded successfully (${resp.status})`);
-      return new Response(JSON.stringify({ received: true, forwarded: true, status: resp.status, data: resp.data }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' }
-      });
+      return json({ received: true, forwarded: true, status: resp.status, data: resp.data });
     } catch (e) {
       const msg = e.response ? `HTTP ${e.response.status}` : e.message;
       await addLog('error', `Forwarding failed: ${msg}`);
-      return new Response(JSON.stringify({ received: true, forwarded: false, error: msg }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' }
-      });
+      return json({ received: true, forwarded: false, error: msg });
     }
   }
 
   return new Response('Method not allowed', { status: 405 });
 }
-
-export { handler };
