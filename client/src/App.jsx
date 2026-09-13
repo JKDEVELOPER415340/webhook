@@ -10,7 +10,7 @@ function App() {
   const [status, setStatus] = useState('');
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [showSecret, setShowSecret] = useState(false);
+  
   const logsRef = useRef(null);
 
   const api = async (path, options = {}) => {
@@ -167,12 +167,9 @@ function App() {
 
           <div className="field">
             <label htmlFor="appSecret">Meta App Key (App Secret) <em>— verifies X-Hub-Signature-256 on every webhook</em></label>
-            <div className="field-row">
-              <input id="appSecret" className="mono" type={showSecret ? 'text' : 'password'}
-                placeholder={appSecretSet ? '•••••••• (leave blank to keep current)' : 'your-app-secret'}
-                value={config.appSecret} onChange={(e) => setConfig({ ...config, appSecret: e.target.value })} />
-              <button type="button" className="btn small" onClick={() => setShowSecret(!showSecret)}>{showSecret ? 'Hide' : 'Show'}</button>
-            </div>
+            <input id="appSecret" className="mono" type="password"
+              placeholder={appSecretSet ? '•••••••• (leave blank to keep current)' : 'your-app-secret'}
+              value={config.appSecret} onChange={(e) => setConfig({ ...config, appSecret: e.target.value })} />
             <p className="hint">Find it in Meta Developer Portal → your app → App settings → Basic → App Secret (next to App ID). When set, webhooks with a wrong or missing signature get a 401.</p>
           </div>
 

@@ -10,14 +10,13 @@ export default async function handler(event) {
     const qs = event.queryStringParameters || {};
     if (validChallenge(qs, cfg.verifyToken)) {
       await addLog('success', 'Webhook verified by Meta');
-      return {
-        statusCode: 200,
-        headers: { 'content-type': 'text/plain' },
-        body: qs['hub.challenge']
-      };
+      return new Response(qs['hub.challenge'], {
+        status: 200,
+        headers: { 'content-type': 'text/plain' }
+      });
     }
     await addLog('error', 'Verification failed: ' + (!cfg.verifyToken ? 'verify token not configured' : 'token mismatch'));
-    return { statusCode: 403, body: 'Verification failed' };
+    return new Response('Verification failed', { status: 403 });
   }
 
   if (event.httpMethod === 'POST') {
@@ -25,7 +24,10 @@ export default async function handler(event) {
     const valid = verifySignature(event.body, sig, cfg.appSecret);
     if (!valid) {
       await addLog('error', 'Rejected webhook: invalid X-Hub-Signature-256');
-      return { statusCode: 401, body: JSON.stringify({ error: 'Invalid signature' }), headers: { 'content-type': 'application/json' } };
+      return new Response(JSON.stringify({ error: 'Invalid signature' }), {
+        status: 401,
+        headers: { 'content-type': 'application/json' }
+      });
     }
 
     let payload;
@@ -36,7 +38,10 @@ export default async function handler(event) {
     const fwd = isEnabled(cfg);
     if (!dest || !fwd) {
       await addLog('warn', 'Forwarding skipped: ' + (!dest ? 'no destination URL' : 'forwarding is stopped'));
-      return { statusCode: 200, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ received: true, forwarded: false, reason: fwd ? 'no-destination' : 'not-running' }) };
+      return new Response(JSON.stringify({ received: true, forwarded: false, reason: fwd ? 'no-destination' : 'not-running' }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' }
+      });
     }
 
     await addLog('forwarding', `Forwarding to ${dest}`);
@@ -46,15 +51,21 @@ export default async function handler(event) {
         headers: { 'content-type': 'application/json', 'x-relay-source': 'meta-webhook-relay' }
       });
       await addLog('success', `Forwarded successfully (${resp.status})`);
-      return { statusCode: 200, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ received: true, forwarded: true, status: resp.status, data: resp.data }) };
+      return new Response(JSON.stringify({ received: true, forwarded: true, status: resp.status, data: resp.data }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' }
+      });
     } catch (e) {
       const msg = e.response ? `HTTP ${e.response.status}` : e.message;
       await addLog('error', `Forwarding failed: ${msg}`);
-      return { statusCode: 200, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ received: true, forwarded: false, error: msg }) };
+      return new Response(JSON.stringify({ received: true, forwarded: false, error: msg }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' }
+      });
     }
   }
 
-  return { statusCode: 405, body: 'Method not allowed' };
+  return new Response('Method not allowed', { status: 405 });
 }
 
 export { handler };

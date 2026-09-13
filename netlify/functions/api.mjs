@@ -2,10 +2,9 @@ import { getConfig, saveConfig, safeConfig, isEnabled, getLogs, addLog, clearLog
 import { WHATSAPP_TEST_PAYLOAD } from './_shared/meta.mjs';
 import axios from 'axios';
 
-const json = (body, statusCode = 200) => ({
-  statusCode,
-  headers: { 'content-type': 'application/json' },
-  body: JSON.stringify(body)
+const json = (body, statusCode = 200) => new Response(JSON.stringify(body), {
+  status: statusCode,
+  headers: { 'content-type': 'application/json' }
 });
 
 export async function handler(event) {
